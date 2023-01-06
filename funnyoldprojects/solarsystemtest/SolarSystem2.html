@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>SolarSystemType1</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<style>
+body {
+font-family: Monospace;
+background-color: #000000;
+margin: 0px;
+overflow: hidden;
+}
+
+#info {
+color: #fff;
+position: absolute;
+top: 10px;
+width: 100%;
+text-align: center;
+z-index: 100;
+display:block;
+
+}
+
+a { color: skyblue }
+</style>
+</head>
+<body>
+<div id="info">
+</div>
+<script src="three.min.js"></script>
+<script src="ColladaLoader.js"></script>
+<script src="Detector.js"></script>
+<script src="stats.min.js"></script>
+	<script src="OrbitControls.js"></script>
+<script>
+if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+ window.requestAnimFrame = (function(callback){
+        return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback){
+            window.setTimeout(callback, 1000 / 60);
+        };
+    })();
+	
+	var renderer,scene,camera;
+	var flag = 0;
+	var container, stats;
+	var angularSpeed,lastTime;
+	var controls;
+	var __loadingInt = setInterval(function(){if(flag==0){clearInterval(__loadingInt);init();}},100);
+	
+ function init()
+ {	
+		container = document.createElement( 'div' );
+		document.body.appendChild( container );
+		stats = new Stats();
+		stats.domElement.style.position = 'absolute';
+		stats.domElement.style.top = '0px';
+		container.appendChild( stats.domElement );
+		angularSpeed = 0.2; // revolutions per second
+        lastTime = 0;
+		
+		//Renderer
+		renderer = new THREE.WebGLRenderer();
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.shadowMapEnabled = true;
+		renderer.antialias = true;
+        document.body.appendChild(renderer.domElement);
+		
+		//canera
+		camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000 );
+		camera.position.set( 2, 2, 2 );
+		//scene
+		scene = new THREE.Scene();
+		
+		// Grid
+		var size = 14, step = 1;
+		var geometry = new THREE.Geometry();
+		var material = new THREE.LineBasicMaterial( { color: 0xcccccc, opacity: 0.2 } );
+		for ( var i = - size; i <= size; i += step ) {
+		geometry.vertices.push( new THREE.Vector3( - size, - 0.04, i ) );
+		geometry.vertices.push( new THREE.Vector3( size, - 0.04, i ) );
+		geometry.vertices.push( new THREE.Vector3( i, - 0.04, - size ) );
+		geometry.vertices.push( new THREE.Vector3( i, - 0.04, size ) );
+
+		}
+		var line = new THREE.Line( geometry, material, THREE.LinePieces );
+		scene.add( line );
+		// EndGrid
+		
+		//AmbientLight
+		scene.add( new THREE.AmbientLight( 0xcccccc ) );
+		
+		var three = {
+            renderer: renderer,
+            camera: camera,
+            scene: scene
+		};
+		window.addEventListener( 'resize', onWindowResize, false );
+		
+		animate(lastTime, angularSpeed, three,this);
+ }
+ 
+ function onWindowResize() {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+}
+ 
+ //var clock = new THREE.Clock();
+ function animate(lastTime, angularSpeed, three){
+        // update
+		//var delta = clock.getDelta();
+		//controls.update();
+        var date = new Date();
+        var time = date.getTime();
+        var timeDiff = time - lastTime;
+        var angleChange = angularSpeed * timeDiff * 2 * Math.PI / 1000;
+		//three.camera.rotation.z += angleChange;
+		//three.camera.rotation.x += angleChange;
+		three.camera.rotation.y += angleChange;
+        lastTime = time;
+ 
+        // render
+        three.renderer.render(three.scene, three.camera);
+ 
+        // request new frame
+        requestAnimFrame(function(){
+            animate(lastTime, angularSpeed, three);
+        });
+		stats.update();
+    }
+	
+
+</script>
+</body>
+</html>

@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>SolarSystemType2</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<style>
+body {
+font-family: Monospace;
+background-color: #000000;
+margin: 0px;
+overflow: hidden;
+}
+
+#info {
+color: #fff;
+position: absolute;
+top: 10px;
+width: 100%;
+text-align: center;
+z-index: 100;
+display:block;
+
+}
+canvas
+{
+margin:0px auto;
+display:block;
+}
+a { color: skyblue }
+</style>
+</head>
+<body>
+<div id="info">
+Click on a planet to make the ship follow it!!
+</div>
+<script src="three.min.js"></script>
+<script src="ColladaLoader.js"></script>
+<script src="Detector.js"></script>
+<script src="stats.min.js"></script>
+	<script src="TrackballControls.js"></script>
+		<script src="FlyControls.js"></script>
+<script>
+//if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+window.requestAnimFrame = (function(callback){
+        return window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function(callback){
+            window.setTimeout(callback, 1000 / 60);
+        };
+    })();
+	var rparticle,rmaterial;
+	var renderer,scene,camera;
+	var flag = 1;
+	var projector;
+	var objecta,parenta;
+	var container, stats;
+	var angularSpeed,lastTime;
+	var controls;
+	var pgeometry;
+	 var toIntersect = new Array();
+	 var SELECTED = null;
+	var target ;
+	var controls2;
+	var ahelp;
+	var sun;
+	var delta;
+	var lastangle;
+	var mercury;
+	var venus ;
+	var geometryaa;
+	var moon;
+	var mesh;
+	var phobos;
+	var marsPivot;
+	var modest =  new THREE.Vector3();
+		modest.x = 10;
+		modest.y = 0;
+		modest.z = 10;
+	var marsPivot2;
+	var sunPivot;
+	var deimos;
+	var earthPivot;
+	var earthmap1k;
+	var mars_1k_color;
+	var mouse = { x: 0, y: 0 }, INTERSECTED;
+	var dae,skin;
+	var speedz;
+		var speedx;
+	var clock = new THREE.Clock();
+	var loader = new THREE.ColladaLoader();
+loader.options.convertUpAxis = true;
+loader.load('Tiny_SpaceShip_by_CoyHot123.dae', function ( collada ) {
+
+dae = collada.scene;
+skin = collada.skins[ 0 ];
+dae.position.set(-3,0,3);
+dae.rotation.y = 0;
+dae.useQuaternion = false;
+dae.scale.x = dae.scale.y = dae.scale.z = 0.1;
+dae.updateMatrix();
+flag=0;
+}
+);
+
+	var sphereTex = THREE.ImageUtils.loadTexture('sunmap.jpg', {}, function () {
+			flag = 0;
+		});
+	var __loadingInt = setInterval(function(){if(flag==0){clearInterval(__loadingInt);init();animate();}},100);
+function init()
+ {	
+	container = document.createElement( 'div' );
+	document.body.appendChild( container );
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.top = '0px';
+	container.appendChild( stats.domElement );
+	
+	angularSpeed = 0.2; // revolutions per second
+        lastTime = 0;
+		
+		//Renderer
+		renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: false });
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		//renderer.setSize( 800, 600);
+		renderer.shadowMapEnabled = true;
+		renderer.antialias = true;
+		renderer.sortObjects = false;
+		renderer.autoClearColor = false; 
+        document.body.appendChild(renderer.domElement);
+		
+		//canera
+		//camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight , 1, 2000 );
+		camera = new THREE.PerspectiveCamera(45, (window.innerWidth) / (window.innerHeight) , 1, 2000 );
+		camera.position.set( 10,3,10 );
+			
+		controls = new THREE.TrackballControls( camera );
+		controls.rotateSpeed = 1.0;
+		controls.zoomSpeed = 2.2;
+		controls.panSpeed = 0.8;
+		controls.noZoom = false;
+		controls.noPan = true;
+		controls.staticMoving = true;
+		controls.dynamicDampingFactor = 0.3;
+	//	controls.keys = [ 65, 83, 68 ];
+		controls.addEventListener( 'change', render );
+
+		
+	/*	controls2 = new THREE.FlyControls( dae );
+
+				controls2.movementSpeed = 1;
+				controls2.domElement = container;
+				controls2.rollSpeed = Math.PI / 24;
+				controls2.autoForward = false;
+				controls2.dragToLook = false;
+		
+		*/
+		//scene
+		scene = new THREE.Scene();
+	//	scene.add( dae );
+		//scene.fog = new THREE.FogExp2( 0x000000, 0.0000025 );
+		
+		//rmaterial = new THREE.ParticleBasicMaterial( { color: 0x008080,size:5});
+		
+		pgeometry = new THREE.Geometry();
+
+				for ( i = 0; i < 20000; i ++ ) {
+
+					var vertex = new THREE.Vector3();
+					vertex.x = Math.random() * 2000 - 1000;
+					vertex.y = Math.random() * 2000 - 1000;
+					vertex.z = Math.random() * 2000 - 1000;
+
+					pgeometry.vertices.push( vertex );
+
+				}
+		rmaterial = new THREE.ParticleBasicMaterial( { map: THREE.ImageUtils.loadTexture( 'nova_particle.png' ),size:5,} );
+
+		/*for ( var i = 0; i < 1000; i ++ ) {
+		
+		rparticle = new THREE.Particle( rmaterial );
+		rparticle.position.x = Math.random() * 40 ;
+		rparticle.position.y = Math.random() * 40 ;
+		rparticle.position.z = Math.random() * 40;
+		//alert(rparticle.position.x);
+		rparticle.scale.x = rparticle.scale.y =rparticle.scale.z = 1;
+		scene.add( rparticle );
+		}*/
+		
+	/*	rparticle = new THREE.Particle( rmaterial );
+		
+		rparticle.position.x =3;
+		rparticle.position.y =0
+		rparticle.position.z =3;
+		rparticle.scale.x = rparticle.scale.y =rparticle.scale.z = 10;
+		scene.add( rparticle );*/
+		
+		
+
+					
+
+					//materials[i] = new THREE.ParticleBasicMaterial( { color: color, size: size } );
+
+					rparticle = new THREE.ParticleSystem( pgeometry, rmaterial );
+
+					rparticle.rotation.x = Math.random() * 6;
+					rparticle.rotation.y = Math.random() * 6;
+					rparticle.rotation.z = Math.random() * 6;
+
+					scene.add( rparticle );
+
+				
+		
+		
+		
+		
+		var particleLight = new THREE.Mesh( new THREE.SphereGeometry( 0.9, 100, 50 ), new THREE.MeshBasicMaterial( { color: 0xffffff , opacity: 0.2 } ) );
+		scene.add( particleLight );
+		var pointLight = new THREE.PointLight( 0xffffff, 4 );
+		pointLight.position = particleLight.position;
+		scene.add( pointLight );
+		// Grid
+		var size = 20, step = 1;
+		var geometry = new THREE.Geometry();
+		var material = new THREE.LineBasicMaterial( { color: 0xcccccc, opacity: 0.2 } );
+		for ( var i = - size; i <= size; i += step ) {
+		geometry.vertices.push( new THREE.Vector3( - size, - 0.04, i ) );
+		geometry.vertices.push( new THREE.Vector3( size, - 0.04, i ) );
+		geometry.vertices.push( new THREE.Vector3( i, - 0.04, - size ) );
+		geometry.vertices.push( new THREE.Vector3( i, - 0.04, size ) );
+
+		}
+		var line = new THREE.Line( geometry, material, THREE.LinePieces );
+		//scene.add( line );
+		// EndGrid
+		projector = new THREE.Projector();
+		//AmbientLight
+		scene.add( new THREE.AmbientLight( 0xffffff ) );
+		
+		//axis helper
+		///ahelp = new THREE.AxisHelper( 10 );
+		//ahelp.position.set( 0, - 0.04, 0 );
+	//	scene.add( ahelp ); 
+		//sun
+		/*var img = new Image();
+		var texture = new THREE.Texture(img);
+		img.onload = function () { texture.needsUpdate = true; };
+		img.src = 'face.png';
+		texture.needsUpdate = true;*/
+		
+		 
+	
+		
+		var materials = new THREE.MeshLambertMaterial({
+            map: sphereTex
+        });
+		sun =  new THREE.Mesh(new THREE.SphereGeometry( 0.9, 100, 50 ), materials );
+		sun.position.set( 0, 0, 0 );
+		
+		scene.add( sun ); 
+		
+	//	sunPivot = new THREE.Object3D();
+	//	sun.add( sunPivot );
+		
+		/*start*/
+/*		
+		 var colors = [ 0x000000, 0xff0080, 0x8000ff, 0xffffff ];
+geometryaa = new THREE.Geometry();
+geometryaa.__dirtyVertices = true;
+for ( var i = 0; i < 5; i ++ ) {
+var vertex = new THREE.Vector3();
+vertex.x = i;
+vertex.y = i;
+vertex.z = i;
+geometryaa.vertices.push( vertex );
+geometryaa.colors.push( new THREE.Color( colors[ Math.floor( Math.random() * colors.length ) ] ) );
+}
+var materialbb = new THREE.ParticleBasicMaterial( { size: 10, vertexColors: THREE. VertexColors, depthTest: false, opacity: 0.5, sizeAttenuation: true ,depthWrite : false} );
+mesh = new THREE.ParticleSystem( geometryaa, materialbb ); 
+		scene.add(mesh);*/
+	/*end	*/
+		
+		
+	//	dae.add(mesh);
+		//sunPivot.add( dae );
+	/*	objecta = new THREE.Object3D();
+		objecta.position.set(4,0,-4);
+		scene.add( objecta );
+		parenta = new THREE.Object3D();
+		
+		objecta.add( parenta );
+		parenta.add( dae );;
+*/
+		scene.add(dae);
+		//mercury
+		var materials = new THREE.MeshLambertMaterial({
+            map: THREE.ImageUtils.loadTexture("mercurymap.jpg"),
+			reflectivity: 0.3
+        });
+		mercury =  new THREE.Mesh(new THREE.SphereGeometry( 0.25, 100, 50 ), materials );
+		mercury.position.set( -2, 0, 2 );
+		scene.add( mercury );
+		
+		//venus
+		var materials = new THREE.MeshLambertMaterial({
+            map: THREE.ImageUtils.loadTexture("venusmap.jpg"),
+			reflectivity: 0.3
+        });
+		venus =  new THREE.Mesh(new THREE.SphereGeometry( 0.4, 100, 50 ), materials );
+		venus.position.set( 3.2, 0, -3.2 );
+		scene.add( venus );
+		
+		//earthmap1k
+		
+		var materials = new THREE.MeshLambertMaterial({
+            map: THREE.ImageUtils.loadTexture("earthmap1k.jpg"),
+			reflectivity: 0.3
+        });
+		earthmap1k =  new THREE.Mesh(new THREE.SphereGeometry( 0.5, 100, 50 ), materials );
+		earthmap1k.position.set( 4.2, 0, 4.2 );
+		scene.add( earthmap1k );
+		
+		
+		earthPivot = new THREE.Object3D();
+		earthmap1k.add( earthPivot );
+		var materials = new THREE.MeshLambertMaterial({
+           map: THREE.ImageUtils.loadTexture("moonmap1k.jpg"),
+		   reflectivity: 0.3
+        });
+		moon =  new THREE.Mesh(new THREE.SphereGeometry( 0.1, 100, 50 ), materials );
+		moon.position.x = 0.85;
+		earthPivot.add( moon ); 
+		
+		
+		
+		
+		
+		//mars_1k_color
+		var materials = new THREE.MeshLambertMaterial({
+            map: THREE.ImageUtils.loadTexture("mars_1k_color.jpg"),
+			reflectivity: 0.3
+        });
+		mars_1k_color =  new THREE.Mesh(new THREE.SphereGeometry( 0.35, 100, 50 ), materials );
+		mars_1k_color.position.set( 5.6, 0, -5.6 );
+		scene.add( mars_1k_color );
+		
+		
+		
+		marsPivot = new THREE.Object3D();
+		mars_1k_color.add( marsPivot );
+		var materials = new THREE.MeshLambertMaterial({
+           map: THREE.ImageUtils.loadTexture("deimosbump.jpg"),
+		   reflectivity: 0.3
+        });
+		deimos =  new THREE.Mesh(new THREE.SphereGeometry( 0.04, 100, 50 ), materials );
+		deimos.position.x = 0.483;
+		marsPivot.add( deimos ); 
+		
+		marsPivot2 = new THREE.Object3D();
+		mars_1k_color.add( marsPivot2 );
+		var materials = new THREE.MeshLambertMaterial({
+           map: THREE.ImageUtils.loadTexture("phobosbump.jpg"),
+		   reflectivity: 0.3
+        });
+		phobos =  new THREE.Mesh(new THREE.SphereGeometry( 0.06, 100, 50 ), materials );
+		phobos.position.x = 0.6;
+		marsPivot2.add( phobos );
+		
+		var resolution = 60;
+		var amplitude = Math.sqrt(2*2 + 2*2);
+		var size = 360 / resolution;
+		geometry = new THREE.Geometry();
+		for ( var i = 0; i <= resolution; i ++ ) {
+			segment = ( i * size ) * Math.PI / 180;
+			geometry.vertices.push( new THREE.Vertex( new THREE.Vector3( Math.cos( segment ) * amplitude, 0, Math.sin( segment ) * amplitude ) ) );
+			}
+
+			var line = new THREE.Line( geometry, material );
+			scene.add( line );
+		
+		var resolution = 60;
+		var amplitude = Math.sqrt(3.2*3.2 + 3.2*3.2);
+		var size = 360 / resolution;
+		geometry = new THREE.Geometry();
+		for ( var i = 0; i <= resolution; i ++ ) {
+			segment = ( i * size ) * Math.PI / 180;
+			geometry.vertices.push( new THREE.Vertex( new THREE.Vector3( Math.cos( segment ) * amplitude, 0, Math.sin( segment ) * amplitude ) ) );
+			}
+
+			var line = new THREE.Line( geometry, material );
+			scene.add( line );
+		
+		
+		var resolution = 60;
+		var amplitude = Math.sqrt(4.2*4.2 + 4.2*4.2);
+		var size = 360 / resolution;
+		geometry = new THREE.Geometry();
+		for ( var i = 0; i <= resolution; i ++ ) {
+			segment = ( i * size ) * Math.PI / 180;
+			geometry.vertices.push( new THREE.Vertex( new THREE.Vector3( Math.cos( segment ) * amplitude, 0, Math.sin( segment ) * amplitude ) ) );
+			}
+
+			var line = new THREE.Line( geometry, material );
+			scene.add( line );
+		
+		var resolution = 60;
+		var amplitude = Math.sqrt(5.6*5.6 + 5.6*5.6);
+		var size = 360 / resolution;
+		geometry = new THREE.Geometry();
+		for ( var i = 0; i <= resolution; i ++ ) {
+			segment = ( i * size ) * Math.PI / 180;
+			geometry.vertices.push( new THREE.Vertex( new THREE.Vector3( Math.cos( segment ) * amplitude, 0, Math.sin( segment ) * amplitude ) ) );
+			}
+
+			var line = new THREE.Line( geometry, material );
+			scene.add( line );
+
+
+
+/*			var circleRadius = 1;
+				var circleShape = new THREE.Shape();
+				circleShape.moveTo( 0, circleRadius );
+				circleShape.quadraticCurveTo( circleRadius, circleRadius, circleRadius, 0 );
+				circleShape.quadraticCurveTo( circleRadius, -circleRadius, 0, -circleRadius );
+				circleShape.quadraticCurveTo( -circleRadius, -circleRadius, -circleRadius, 0 );
+				circleShape.quadraticCurveTo( -circleRadius, circleRadius, 0, circleRadius );
+				
+				var points = circleShape.createPointsGeometry();
+				
+				//function addShape( shape, extrudeSettings, color, x, y, z, rx, ry, rz, s ) {
+				
+			var line = new THREE.Line( points, new THREE.LineBasicMaterial( { color: 0x00ff11, linewidth: 1 } ) );
+					line.position.set( 1, 1, 1 );
+					line.rotation.set( 0, 0, 0 );
+					line.scale.set( 1, 1, 1 );
+					scene.add( line );
+*/
+toIntersect.push(earthmap1k);
+	toIntersect.push(mercury);
+	toIntersect.push(venus);mars_1k_color
+	toIntersect.push(mars_1k_color);
+document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+		renderer.domElement.addEventListener( 'mousedown', onDocumentMouseDown, false );
+		window.addEventListener( 'resize', onWindowResize, false );
+	}
+	
+		function onDocumentMouseMove( event ) {
+
+				event.preventDefault();
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+			}
+	
+	function onDocumentMouseDown( event ) {
+
+				event.preventDefault();
+
+				var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+				projector.unprojectVector( vector, camera );
+
+				var ray = new THREE.Ray( camera.position, vector.subSelf( camera.position ).normalize() );
+
+				var intersects = ray.intersectObjects( toIntersect );
+
+				if ( intersects.length > 0 ) {
+
+					SELECTED = intersects[ 0 ].object;
+}}
+	function onWindowResize() {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	}
+	
+	function animate(){
+		requestAnimationFrame( animate );
+		
+		
+		controls.update();
+		render();
+		stats.update();	
+	}
+	
+	function render() {
+	//controls2.update();
+	//INTERSECTED.material.emissive.setHex( 0xff0000 );
+	delta = clock.getDelta();
+		time = clock.getElapsedTime();
+		//sunPivot.rotation.y += delta * 0.3;
+		
+	//	sun.rotation.y += delta * 0.1;
+		
+	//	scene.remove(mesh);
+		// var colors = [ 0x000000, 0xff0080, 0x8000ff, 0xffffff ];
+		//geometryaa = new THREE.Geometry();
+		//mesh.geometry.vertices.pop();
+	//	alert(dae.matrixWorld.getPosition().x);
+//	dae.updateMatrix();
+	//mesh.geometry.__dirtyVertices = true;
+		//mesh.geometry.vertices.push( dae.matrixWorld.getPosition() );
+		
+	//	var vertex = new THREE.Vector3();
+		
+		//alert(dae.position.x)
+		//alert(dae.matrixWorld.getPosition().x)
+		//alert(earthmap1k.position.x +" : " + earthmap1k.position.z);
+		//alert(dae.position.x +" : " + dae.position.z )
+		//if(dae.position.x == 6){
+	/*	if(earthmap1k.position.x-dae.position.x > 0)
+		{speedx = 0.1*(earthmap1k.position.x-dae.position.x);}
+		else
+		{speedx = -0.1*(earthmap1k.position.x-dae.position.x);}
+		alert(speedx);
+		if(earthmap1k.position.z-dae.position.z > 0)
+		{speedz = 0.1*(earthmap1k.position.z-dae.position.z);}
+		else
+		{speedz = -0.1*(earthmap1k.position.z-dae.position.z);}*/
+		if( SELECTED ){
+		speedx = SELECTED.position.x-dae.position.x;
+		speedz = SELECTED.position.z-dae.position.z;
+		
+		//}
+		//alert("before1" + dae.position.x)
+		//dae.position.x = 22;
+		//alert("before2" + dae.matrixWorld.getPosition().x)
+		dae.position.set(dae.position.x + (0.215*speedx)*delta ,0 ,dae.position.z + (0.215*speedz)*delta);
+		
+		var temp1 = Math.sqrt(speedx*speedx+speedz*speedz)
+		var angle;
+		
+		if(speedx >= 0 )
+		{
+		
+		angle = Math.acos(speedz/temp1);
+		//angle = Math.atan(speedz/speedx);
+		
+		//console.log(">> COS speedx : " + speedx + "speedz : " + speedz + " angle" + angle + "currdire : "+ dae.rotation.y + "last angle" + lastangle);
+		//alert("speedx : " + speedx + "speedz : " + speedz + " angle" + angle);
+		
+		/*	if(speedz<0)
+			{
+			angle = Math.acos(speedz/temp1);
+			console.log(">> COS SPEEDZ NEG speedx : " + speedx + "speedz : " + speedz + " angle" + angle + "currdire : "+ dae.rotation.y + "last angle" + lastangle);
+			}*/
+		}
+		else
+		{
+		if (speedz>=0)
+	{
+		angle = Math.asin(speedx/temp1);
+	//	angle = Math.atan(speedx/speedz);
+		//console.log(">> SIN speedx : " + speedx + "speedz : " + speedz + " angle" + angle + "currdire : "+ dae.rotation.y + "last angle" + lastangle);
+		}
+	else
+		{
+		//angle = dae.rotation.y - 0.3;//Math.atan(speedx/speedz);
+	//	if(dae.rotation.y >0)
+		//{angle = Math.atan(speedx/speedz);
+	//	console.log(">>TAN POS speedx : " + speedx + "speedz : " + speedz + " angle : "  + angle + "currdire : "+ dae.rotation.y + "last angle" + lastangle);}
+		//else
+	//	{
+		//angle = -Math.atan(speedz/speedx);
+		//console.log(">>TAN NEG speedx : " + speedx + "speedz : " + speedz + " angle : " + angle + "currdire : "+ dae.rotation.y + "last angle" + lastangle);}
+
+		angle = Math.atan(speedx/speedz)-Math.PI;
+		//angle = lastangle;
+		//console.log(">>TAN NEG speedx : " + speedx + "speedz : " + speedz + " angle : " + angle + "currdire : "+ dae.rotation.y + "last angle" + lastangle);
+		//}
+		//}
+	}
+	}
+		//console.log("speedx : " + speedx + "speedz : " + speedz + " angle" + angle + "currdire : "+ dae.rotation.y);
+		//alert("speedx : " + speedx + "speedz : " + speedz + " angle" + angle);
+	//	if(angle==0)
+	//	{
+	///	alert("ola");
+	//	}
+	
+		//console.log("hello world"); 
+		//alert(angle);
+		//alert("rotation" + dae.rotation.y);
+		//alert("angle" + angle);
+		//console.log("before :"+ dae.rotation.y)
+		//	console.log("angle" + angle + " lastangle" + lastangle);
+		//if(angle >= 0 && lastangle < 0 || angle < 0 && lastangle >= 0 )
+		if(angle >= 3.13 && lastangle < -3.13 || angle < -3.13 && lastangle >= 3.13 )
+		{
+		console.log(" OKAY angle" + angle + " lastangle" + lastangle);
+		dae.rotation.y = (angle);
+		//dae.rotation.y += ((-angle)-(dae.rotation.y))*delta;
+		//lastangle = -angle;
+		lastangle = angle;
+		}
+		else
+		
+//	{
+	//	if(angle<0)
+	//	{
+	//	dae.rotation.y -= Math.abs(((angle)-(dae.rotation.y))*delta);
+	//	}
+	//	else
+	//	{
+	//	dae.rotation.y += Math.abs(((angle)-(dae.rotation.y))*delta);
+	//	}
+		{
+		/*if(angle < 0 && lastangle >= 0 )
+		{
+		console.log("NOT OKAY angle" + angle + " lastangle" + lastangle);
+		dae.rotation.y =angle;
+		}
+		else{*/
+		dae.rotation.y += ((angle)-(dae.rotation.y))*delta;
+		lastangle = angle;
+		
+		/*}*/
+		
+		}
+		}
+			
+//		}//*(180/Math.PI);
+	//	console.log("after :"+ dae.rotation.y)
+		//if(angle<0)
+		//{alert("angle" + angle);
+		//alert("rotation" + dae.rotation.y);}
+		//alert("after" + dae.matrixWorld.getPosition().x)
+		//dae.position.y = 0;
+		//dae.position.z = dae.position.z + speedz*delta;
+	//	dae.translateZ(speedz*delta);
+	//	dae.translateY(0);
+	//	dae.translateX(speedz*delta);
+	//	dae.updateMatrix();
+		
+	//	mesh.geometry.verticesNeedUpdate = true;
+	//	mesh.geometry.vertices.push(vertex);
+	//	mesh.geometry.colors.push( new THREE.Color( colors[ Math.floor( Math.random() * colors.length ) ] ) );
+	//mesh.updateMatrix();
+	//	geometryaa.colors.push( new THREE.Color( colors[ Math.floor( Math.random() * colors.length ) ] ) );
+	//	var materialbb = new THREE.ParticleBasicMaterial( { size: 1, vertexColors: THREE.VertexColors, depthTest: false, opacity: 0.5, sizeAttenuation: false } );
+	//	mesh = new THREE.ParticleSystem( geometryaa, materialbb );
+	//mesh.position.set(dae.matrixWorld.getPosition());
+//	scene.add( mesh );
+	//	for ( var i = 0; i < 5; i ++ ) {
+
+    // get the particle
+  /*  var particle = mesh.geometry.vertices[i];
+		particle.x = dae.matrixWorld.getPosition().x;
+		particle.y = dae.matrixWorld.getPosition().y;
+		particle.z = dae.matrixWorld.getPosition().z;
+	}
+		mesh.geometry.__dirtyVertices = true;*/
+		mercury.rotation.y += delta * 0.1;
+		var amplitude = Math.sqrt(2*2 + 2*2);
+		mercury.position.x = Math.cos( time*0.1 ) * amplitude ; 
+		mercury.position.y = 0;
+	mercury.position.z = Math.sin( time*0.1 ) * amplitude ;
+		
+		var amplitude = Math.sqrt(3.2*3.2 + 3.2*3.2);
+	venus.position.x = Math.cos( time*0.2 ) * amplitude ; 
+		venus.position.y = 0;
+		venus.position.z = Math.sin( time*0.2 ) * amplitude ;
+		venus.rotation.y += delta * 0.1;
+		//0.15
+		var amplitude = Math.sqrt(4.2*4.2 + 4.2*4.2);
+		earthmap1k.position.x = Math.cos( -time*0.21) * amplitude ; 
+		earthmap1k.position.y = 0;
+	earthmap1k.position.z = Math.sin( -time*0.21 ) * amplitude ;
+		earthmap1k.rotation.y += delta * 0.22;
+		
+		var amplitude = Math.sqrt(1*1 + 1*1);
+	/*	moon.position.x = earthmap1k.position.x + Math.cos( time*0.15 ) * amplitude ; 
+		moon.position.y = 0;
+		moon.position.z = earthmap1k.position.z + Math.sin( time*0.15 ) * amplitude ;*/
+		moon.rotation.y += delta * 0.22;
+		
+		
+		earthPivot.rotation.y -=  delta * 1.1;
+		moon.rotation.y += delta * 0.22;
+		
+		marsPivot.rotation.y -=  delta * 0.9;
+		marsPivot2.rotation.y -=  delta * 0.8;
+		phobos.rotation.y += delta * 0.22;
+		deimos.rotation.y += delta * 0.22;
+		
+		var amplitude = Math.sqrt(5.6*5.6 + 5.6*5.6);
+		
+		
+		
+		mars_1k_color.position.x = Math.cos( time*0.21 ) * amplitude ; 
+		mars_1k_color.position.y = 0;
+		mars_1k_color.position.z = Math.sin( time*0.21 ) * amplitude ;
+		mars_1k_color.rotation.y += delta * 0.15;
+	/*	sun.rotation.y += delta * 0.1;
+		sun.rotation.y += delta * 0.1;
+		sun.rotation.y += delta * 0.1;
+		*/
+		//controls2.movementSpeed = 0.33;
+	//camera.lookAt( scene.position );
+
+	//alert(scene.children);
+		/*	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+				projector.unprojectVector( vector, camera );
+
+				var ray = new THREE.Ray( camera.position, vector.subSelf( camera.position ).normalize() );
+
+				//var intersects = ray.intersectObjects( scene.children );
+				var intersects = ray.intersectObjects( toIntersect );
+
+				if ( intersects.length > 0 ) {
+
+				
+					if ( INTERSECTED != intersects[ 0 ].object ) {
+
+											//alert(intersects[ 0 ].object.position.x + " + " + intersects[ 0 ].object.position.y + " + " + intersects[ 0 ].object.position.z);
+						INTERSECTED = intersects[ 0 ].object;
+						
+					/*	alert(object.position.x + " + " + object.position.y + " + " + object.position.z);
+					INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+						INTERSECTED.material.emissive.setHex( 0xff0000 );*/
+/*
+					}
+
+				} else {
+
+					
+
+					INTERSECTED = null;
+
+				}*/
+		renderer.render( scene, camera );
+	
+	}
+
+</script>
+</body>
+</html>
